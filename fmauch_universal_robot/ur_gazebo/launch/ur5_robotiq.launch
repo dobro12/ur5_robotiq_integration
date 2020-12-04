@@ -3,10 +3,6 @@
   <arg name="limited" default="false"  doc="If true, limits joint range [-PI, PI] on all joints." />
   <arg name="paused" default="false" doc="Starts gazebo in paused mode" />
   <arg name="gui" default="true" doc="Starts gazebo gui" />
-  <!-- for gripper -->
-  <arg name="sim" default="false"/>
-  <arg name="comport" default="/dev/ttyUSB0" unless="$(arg sim)"/> 
-  <arg name="baud" default="115200" unless="$(arg sim)"/> 
   
   <!-- startup simulated world -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -32,12 +28,10 @@
 
   <!-- Launch action server for gripper -->
   <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_action_server.launch">
-      <arg name="comport" value="$(arg comport)" unless="$(arg sim)"/>
-      <arg name="baud" value="$(arg baud)" unless="$(arg sim)"/>
       <arg name="stroke" value="0.085"/>
       <arg name="joint_name" value="finger_joint"/>
       <arg name="verbose" value="true"/>
-      <arg name="sim" value="$(arg sim)"/>
+      <arg name="sim" value="true"/>
   </include>
 
   <!-- start ur5 joint trajectory controller -->
