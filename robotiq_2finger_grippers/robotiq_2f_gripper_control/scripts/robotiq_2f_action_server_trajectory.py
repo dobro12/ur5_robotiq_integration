@@ -20,19 +20,12 @@ Parameters:
 @author: Daniel Felipe Ordonez Apraez
 @email: daniels.ordonez@gmail.com
 --------------------------------------------------------------------"""
+import rospy
 from robotiq_2f_gripper_control.robotiq_2f_gripper_driver import Robotiq2FingerGripperDriver, Robotiq2FingerSimulatedGripperDriver 
-
+import actionlib
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryResult, FollowJointTrajectoryFeedback, FollowJointTrajectoryGoal, JointTrajectoryControllerState
 from robotiq_2f_gripper_msgs.msg import CommandRobotiqGripperFeedback, CommandRobotiqGripperResult, CommandRobotiqGripperAction, CommandRobotiqGripperGoal
-from control_msgs.msg import GripperCommandAction, GripperCommandGoal, GripperCommand
-from control_msgs.msg import GripperCommandGoal
-from control_msgs.msg import GripperCommand
-from sensor_msgs.msg import JointState
-
-import actionlib
-import rospy
-
-
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 GOAL_DETECTION_THRESHOLD = 0.05 # Max deviation from target goal to consider as goal "reached"
 
@@ -224,8 +217,8 @@ class CommandGripperActionSimulationServer(object):
                                                             execute_cb=self.execute_cb, 
                                                             auto_start = False)
 
-        self._action_client = actionlib.SimpleActionClient('/effort_gripper_controller/gripper_cmd', GripperCommandAction)
-        self._subsciber = rospy.Subscriber("/joint_states", JointState, self._update_joint_data)
+        self._action_client = actionlib.SimpleActionClient('/gripper_controller/follow_joint_trajectory', FollowJointTrajectoryAction)
+        self._subsciber = rospy.Subscriber("/gripper_controller/state", JointTrajectoryControllerState, self._update_joint_data)
         self.joint_position = None
         
         # Wait until gripper driver is ready to take commands.
@@ -243,15 +236,14 @@ class CommandGripperActionSimulationServer(object):
             rospy.loginfo("Robotiq server started")
 
     def _update_joint_data(self, data):
-        joint_idx = data.name.index('finger_joint')
-        self.joint_position = data.position[joint_idx]
+        self.joint_position = data.actual.positions[0]
 
     def _connection_timeout(self, event):
         rospy.logfatal("Gripper seems not to respond.")
         rospy.signal_shutdown("Gripper seems not to respond.")
 
     def _execution_timeout(self, event):
-        rospy.logerr("Achieving goal is taking too long, dropping current goal")
+        rospy.logerr("%s: Achieving goal is taking too long, dropping current goal")
         self._is_stalled = True
         self._processing_goal = False
     
@@ -263,19 +255,16 @@ class CommandGripperActionSimulationServer(object):
       feedback = CommandRobotiqGripperFeedback()
       result = CommandRobotiqGripperResult()
 
-      goal = GripperCommandGoal()
-      goal.command.position = goal_command.position
-      goal.command.max_effort = goal_command.force
-      self._action_client.send_goal(goal)
-      #self._action_client.wait_for_result()
       # Set timeout timer 
       watchdog = rospy.Timer(rospy.Duration(5.0), self._execution_timeout, oneshot=True)
-      # Wait until goal is achieved and provide feedback
-      rate = rospy.Rate( rospy.get_param('~rate', 30) )
-      while not rospy.is_shutdown() and self._processing_goal and not self._is_stalled:
-          if abs(self.joint_position - goal_command.position) < 0.1:
-              break
-          rate.sleep()
+      goal = FollowJointTrajectoryGoal()
+      goal.trajectory.joint_names = ["finger_joint"]
+      point = JointTrajectoryPoint()
+      point.positions = [goal_command.position]
+      point.time_from_start = rospy.Duration(abs(goal_command.position - self.joint_position)/(goal_command.speed + 1e-10))
+      goal.trajectory.points.append(point)
+      self._action_client.send_goal(goal)
+      self._action_client.wait_for_result()
       watchdog.shutdown()
       
       result = feedback

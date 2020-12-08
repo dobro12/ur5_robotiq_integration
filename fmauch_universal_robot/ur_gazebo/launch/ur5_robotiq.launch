@@ -24,9 +24,11 @@
 
   <!-- start robotiq gripper controller -->
   <rosparam file="$(find robotiq_2f_85_gripper_gazebo)/controller/gripper_controller_robotiq.yaml" command="load"/>
-  <node name="gripper_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn gripper_controller" respawn="false" output="screen"/>
+  <!--<node name="gripper_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn gripper_trajectory_controller" respawn="false" output="screen"/>-->
+  <!--<node name="gripper_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn position_gripper_controller" respawn="false" output="screen"/>-->
+  <node name="gripper_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn effort_gripper_controller" respawn="false" output="screen"/>
 
-  <!-- Launch action server for gripper -->
+  <!-- Launch action server for gripper-->
   <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_action_server.launch">
       <arg name="stroke" value="0.085"/>
       <arg name="joint_name" value="finger_joint"/>

@@ -127,6 +127,14 @@
         </material>
       </visual>
       <collision>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.0</mu>
+              <mu2>1.0</mu2>
+            </ode>
+          </friction>
+        </surface>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
            <box size="0.022 0.00635 0.0375"/>
