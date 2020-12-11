@@ -8,7 +8,7 @@
   <xacro:include filename="$(find robotiq_2f_85_gripper_gazebo)/urdf/robotiq_arg2f_85_mimic.gazebo.xacro" />
   <xacro:robotiq_85_mimic_gazebo prefix=""/>
 
-  <!-- Improve grasping physics -->
+  <!-- Improve grasping physics
   <gazebo reference="left_inner_finger_pad">
     <kp>1000000.0</kp>
     <kd>1.0</kd>
@@ -23,6 +23,7 @@
     <mu2>1.0</mu2>
     <minDepth>0.001</minDepth>
   </gazebo>
+  -->
   <!-- ########## -->
 
 </robot>

@@ -13,7 +13,8 @@
     <gravity>0 0 -9.81</gravity>
 
     <!--<physics name="default_physics" default="0" type="ode">-->
-    <physics type="ode">
+    <!--<physics type="ode">-->
+    <physics type="bullet">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>
       <real_time_update_rate>1000</real_time_update_rate>
@@ -73,12 +74,16 @@
             <contact>
               <poissons_ratio>0.347</poissons_ratio>
               <elastic_modulus>8.8e+09</elastic_modulus>
-              <ode>
+              <!--<ode>-->
+              <bullet>
                 <kp>100000</kp>
                 <kd>1</kd>
-                <max_vel>1.0</max_vel>
-                <min_depth>0.001</min_depth>
-              </ode>
+                <!--<max_vel>1.0</max_vel>-->
+                <split_impulse>1</split_impulse>
+                <split_impulse_penetration_threshold>0.01</split_impulse_penetration_threshold>
+                <!--<min_depth>0.001</min_depth>-->
+              <!--</ode>-->
+              </bullet>
             </contact>
             <friction>
               <torsional>
@@ -131,18 +136,29 @@
             <contact>
               <poissons_ratio>0.347</poissons_ratio>
               <elastic_modulus>8.8e+09</elastic_modulus>
-              <ode>
+              <bullet>
+                <soft_cfm>1.0</soft_cfm>
+                <soft_erp>0.2</soft_erp>
                 <kp>100000</kp>
-                <kd>100.0</kd>
-                <max_vel>0.001</max_vel>
-                <min_depth>0.01</min_depth>
-              </ode>
+                <kd>1</kd>
+                <!--<max_vel>1.0</max_vel>-->
+                <split_impulse>1</split_impulse>
+                <split_impulse_penetration_threshold>0.01</split_impulse_penetration_threshold>
+                <!--<min_depth>0.001</min_depth>-->
+              <!--</ode>-->
+              </bullet>
             </contact>
             <friction>
+              <!--
               <ode>
                 <mu>10.0</mu>
                 <mu2>10.0</mu2>
-              </ode>
+              </ode>-->
+              <bullet>
+                <friction>10.0</friction>
+                <friction2>10.0</friction2>
+                <fdir1>0 0 1</fdir1>
+              </bullet>
               <torsional>
                 <coefficient>10.0</coefficient>
                 <use_patch_radius>0</use_patch_radius>
@@ -193,18 +209,17 @@
             <contact>
               <poissons_ratio>0.347</poissons_ratio>
               <elastic_modulus>8.8e+09</elastic_modulus>
-              <ode>
+              <bullet>
                 <kp>100000</kp>
                 <kd>1</kd>
-                <max_vel>1.0</max_vel>
-                <min_depth>0.001</min_depth>
-              </ode>
+                <!--<max_vel>1.0</max_vel>-->
+                <split_impulse>1</split_impulse>
+                <split_impulse_penetration_threshold>0.01</split_impulse_penetration_threshold>
+                <!--<min_depth>0.001</min_depth>-->
+              <!--</ode>-->
+              </bullet>
             </contact>
             <friction>
-              <ode>
-                <mu>10.0</mu>
-                <mu2>10.0</mu2>
-              </ode>
               <torsional>
                 <coefficient>1.0</coefficient>
                 <use_patch_radius>0</use_patch_radius>

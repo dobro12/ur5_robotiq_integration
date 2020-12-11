@@ -112,6 +112,19 @@
         </geometry>
       </collision>
     </link>    
+
+    <!-- Improve grasping physics -->
+    <gazebo reference="${prefix}${fingerprefix}_inner_finger">
+      <kp>1000000.0</kp>
+      <kd>1.0</kd>
+      <mu1>1.5</mu1>
+      <mu2>1.5</mu2>
+      <fdir1>0.0 0.0 1.0</fdir1>
+      <minDepth>0.005</minDepth>
+      <!--<maxVel>0.001</maxVel>-->
+    </gazebo>
+    <!-- ########## -->
+
   </xacro:macro>
 
    <!-- Finger pad link, the default are the "big pads" with rubber-->
@@ -127,14 +140,6 @@
         </material>
       </visual>
       <collision>
-        <surface>
-          <friction>
-            <ode>
-              <mu>1.0</mu>
-              <mu2>1.0</mu2>
-            </ode>
-          </friction>
-        </surface>
         <origin xyz="0 0 0" rpy="0 0 0" />
         <geometry>
            <box size="0.022 0.00635 0.0375"/>
@@ -144,6 +149,19 @@
         </material>
       </collision>
     </link>    
+
+    <!-- Improve grasping physics -->
+    <gazebo reference="${prefix}${fingerprefix}_inner_finger_pad">
+      <kp>1000000.0</kp>
+      <kd>1.0</kd>
+      <mu1>1.5</mu1>
+      <mu2>1.5</mu2>
+      <fdir1>0.0 0.0 1.0</fdir1>
+      <minDepth>0.005</minDepth>
+      <!--<maxVel>0.001</maxVel>-->
+    </gazebo>
+    <!-- ########## -->
+
   </xacro:macro>
 
   <xacro:macro name="outer_finger_joint" params="prefix fingerprefix">

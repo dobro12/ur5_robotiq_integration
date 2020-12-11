@@ -217,34 +217,29 @@ class CommandGripperActionServer(object):
 
 
 class CommandGripperActionSimulationServer(object):
-    def __init__(self, namespace, action_name):
+    def __init__(self, namespace, action_name, gripper_driver):
         self._action_name = namespace + action_name
         self._action_server = actionlib.SimpleActionServer(self._action_name, 
                                                             CommandRobotiqGripperAction, 
                                                             execute_cb=self.execute_cb, 
                                                             auto_start = False)
-
-        self._action_client = actionlib.SimpleActionClient('/effort_gripper_controller/gripper_cmd', GripperCommandAction)
-        self._subsciber = rospy.Subscriber("/joint_states", JointState, self._update_joint_data)
-        self.joint_position = None
+        self._driver = gripper_driver
         
         # Wait until gripper driver is ready to take commands.
         watchdog = rospy.Timer(rospy.Duration(15.0), self._connection_timeout, oneshot=True)
-        while not rospy.is_shutdown() and self.joint_position != None:
-            rospy.sleep(0.5)
-            rospy.logwarn_throttle(5, self._action_name + ": Waiting for gripper to be ready...")
-        
+        while not rospy.is_shutdown():
+            rospy.sleep(1.0)
+            rospy.logwarn_throttle(5, self._action_name + ": Waiting for gripper to be ready...")        
+            if self._driver.is_ready:
+                break
         watchdog.shutdown() 
+
         if not rospy.is_shutdown():
             self._processing_goal = False
             self._is_stalled = False
 
             self._action_server.start()
             rospy.loginfo("Robotiq server started")
-
-    def _update_joint_data(self, data):
-        joint_idx = data.name.index('finger_joint')
-        self.joint_position = data.position[joint_idx]
 
     def _connection_timeout(self, event):
         rospy.logfatal("Gripper seems not to respond.")
@@ -256,40 +251,100 @@ class CommandGripperActionSimulationServer(object):
         self._processing_goal = False
     
     def execute_cb(self, goal_command):
-      rospy.logdebug( (self._action_name + ": New goal received Pos:%.3f Speed: %.3f Force: %.3f Force-Stop: %r") % (goal_command.position, goal_command.speed, goal_command.force, goal_command.stop) )
-      # Set Action Server as active === processing goal...
-      self._processing_goal = True        
-      
-      feedback = CommandRobotiqGripperFeedback()
-      result = CommandRobotiqGripperResult()
+        rospy.logdebug( (self._action_name + ": New goal received Pos:%.3f Speed: %.3f Force: %.3f Force-Stop: %r") % (goal_command.position, goal_command.speed, goal_command.force, goal_command.stop) )
+        # Set Action Server as active === processing goal...
+        self._processing_goal = True        
+        
+        feedback = CommandRobotiqGripperFeedback()
+        result = CommandRobotiqGripperResult()
 
-      goal = GripperCommandGoal()
-      goal.command.position = goal_command.position
-      goal.command.max_effort = goal_command.force
-      self._action_client.send_goal(goal)
-      #self._action_client.wait_for_result()
-      # Set timeout timer 
-      watchdog = rospy.Timer(rospy.Duration(5.0), self._execution_timeout, oneshot=True)
-      # Wait until goal is achieved and provide feedback
-      rate = rospy.Rate( rospy.get_param('~rate', 30) )
-      while not rospy.is_shutdown() and self._processing_goal and not self._is_stalled:
-          if abs(self.joint_position - goal_command.position) < 0.1:
-              break
-          rate.sleep()
-      watchdog.shutdown()
-      
-      result = feedback
-      # Send result 
-      if not self._is_stalled:
-          rospy.logdebug(self._action_name + ": goal reached or object detected Pos: %.3f PosRequested: %.3f ObjectDetected: %r" % (goal_command.position, feedback.requested_position, feedback.obj_detected) )
-          self._action_server.set_succeeded(result)  
-      else:
-          rospy.logerr(self._action_name + ": goal aborted Pos: %.3f PosRequested: %.3f ObjectDetected: %r" % (goal_command.position, feedback.requested_position, feedback.obj_detected) )
-          self._action_server.set_aborted(result)  
+        # Set timeout timer 
+        watchdog = rospy.Timer(rospy.Duration(5.0), self._execution_timeout, oneshot=True)
+        # Wait until goal is achieved and provide feedback
+        rate = rospy.Rate( rospy.get_param('~rate', 30) )
+        cnt = 0
+        self._driver.set_goal(goal_command.position, goal_command.speed, goal_command.force)
+        while not rospy.is_shutdown() and self._processing_goal and not self._is_stalled:
+            if abs(self._driver.joint_position - goal_command.position) < 0.1:
+                self._processing_goal = False
+                break
+            if abs(self._driver.joint_velocity) < 0.7:
+                cnt += 1
+            else:
+                cnt = 0
+            if cnt > 100:
+                self._is_stalled = True
+                break
+            rate.sleep()
+        watchdog.shutdown()
+        
+        result = feedback
+        # Send result 
+        if not self._is_stalled:
+            rospy.logdebug(self._action_name + ": goal reached or object detected Pos: %.3f PosRequested: %.3f ObjectDetected: %r" % (goal_command.position, feedback.requested_position, feedback.obj_detected) )
+            self._action_server.set_succeeded(result)  
+        else:
+            rospy.logerr(self._action_name + ": goal aborted Pos: %.3f PosRequested: %.3f ObjectDetected: %r" % (goal_command.position, feedback.requested_position, feedback.obj_detected) )
+            self._action_server.set_aborted(result)  
+            #self._driver.cancel_goal()
 
-      self._processing_goal = False 
-      self._is_stalled = False 
+        self._processing_goal = False 
+        self._is_stalled = False 
     
+
+class GazeboGripperDriver(object):
+    def __init__(self, joint_name):
+        self.joint_name = joint_name
+        self._action_client = actionlib.SimpleActionClient('/effort_gripper_controller/gripper_cmd', GripperCommandAction)
+        #self._action_client = actionlib.SimpleActionClient('/position_gripper_controller/gripper_cmd', GripperCommandAction)
+        self._subsciber = rospy.Subscriber("/joint_states", JointState, self._update_joint_data)
+        self.is_ready = False
+        self.is_reached = True
+        self.joint_position = 0.0
+        self.joint_velocity = 0.0
+        self.joint_effort = 0.0
+        self.des_pos = 0.0
+        self.des_vel = 10.0
+        self.max_effort = 10.0
+        #self.max_effort = -1.0
+
+        self._action_client.wait_for_server()
+        goal = GripperCommandGoal()
+        goal.command.position = self.des_pos
+        goal.command.max_effort = self.max_effort
+        self._action_client.send_goal(goal)
+        self._action_client.wait_for_result()
+
+
+    def _update_joint_data(self, data):
+        if not self.is_ready:
+            self.is_ready = True
+        joint_idx = data.name.index(self.joint_name)
+        self.joint_position = data.position[joint_idx]
+        self.joint_velocity = data.velocity[joint_idx]
+        self.joint_effort = data.effort[joint_idx]
+        #rospy.loginfo('[Gazebo Gripper Driver] joint velocity : {:.5f}, joint effort : {:.5f}'.format(self.joint_velocity, self.joint_effort))
+
+    def update_driver(self):
+        if not self.is_reached:
+            goal = GripperCommandGoal()
+            goal.command.position = self.des_pos
+            goal.command.max_effort = self.max_effort
+            self._action_client.send_goal(goal)
+            #self._action_client.wait_for_result()
+            self.is_reached = True
+            rospy.loginfo('[Gazebo Gripper Driver] reached goal!')
+
+    def set_goal(self, position, velocity, force):
+        self.des_pos = position
+        self.des_vel = velocity
+        self.max_effort = force
+        self.is_reached = False
+
+    def cancel_goal(self):
+        self._action_client.cancel_goal()
+        #pass
+
 
 if __name__ == "__main__":
 
@@ -306,10 +361,11 @@ if __name__ == "__main__":
     r = rospy.Rate(rospy.get_param('~rate', 50 if not sim else 20))
 
     if sim:
-        server = CommandGripperActionSimulationServer(rospy.get_namespace(), 'command_robotiq_action')
+        gripper_driver = GazeboGripperDriver(joint_name=joint_name)
+        server = CommandGripperActionSimulationServer(rospy.get_namespace(), 'command_robotiq_action', gripper_driver)
         while not rospy.is_shutdown():
+            gripper_driver.update_driver()
             r.sleep()
-
     else:
         # Try to connect to a real gripper 
         gripper_driver = Robotiq2FingerGripperDriver( comport=comport, baud=baud, stroke=stroke, joint_name=joint_name)

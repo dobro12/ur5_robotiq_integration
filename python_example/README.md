@@ -85,7 +85,11 @@ rqt_graph 뿐만 아니라, rostopic list 를 통해 좀 더 디테일한 토픽
 
   - 결론은, 영향을 주는 건 rviz 화면 뿐이다~. 물론 moveit의 충돌검사시, gripper가 열려있냐 닫혀있냐가 아주 작은 영향을 줄 수 있기 때문에, 실제 로봇에서도 sync를 맞추면 좋을 것 같긴 하다. 아직은 실제 로봇에선 값이 충돌났는지 확인이 안된 상태니, 충돌안나면 깔끔하고, 충돌나면 흐음 그때 생각해봅시다.
   
-  ## GAZEBO Default file Download
+## GAZEBO Default file Download
 
-  - gazebo는 default로 필요한 파일을 따로 받아야하는 듯 하다. 링크는 `https://github.com/osrf/gazebo_models`, 이고 해당 파일을 `~/.gazebo/models`에 저장하거나 또는 `GAZEBO_MODEL_PATH` 환경변수로 모델 위치를 지정해주면 된다고 한다.
+- gazebo는 default로 필요한 파일을 따로 받아야하는 듯 하다. 링크는 `https://github.com/osrf/gazebo_models`, 이고 해당 파일을 `~/.gazebo/models`에 저장하거나 또는 `GAZEBO_MODEL_PATH` 환경변수로 모델 위치를 지정해주면 된다고 한다.
+
+## 2020.12.09
+
+- gazebo tutorial 위치 : http://gazebosim.org/tutorials?tut=friction
   
