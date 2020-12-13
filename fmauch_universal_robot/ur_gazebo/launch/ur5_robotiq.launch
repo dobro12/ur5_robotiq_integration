@@ -2,6 +2,7 @@
 <launch>
   <arg name="limited" default="false"  doc="If true, limits joint range [-PI, PI] on all joints." />
   <arg name="paused" default="false" doc="Starts gazebo in paused mode" />
+  <!--<arg name="paused" default="true" doc="Starts gazebo in paused mode" />-->
   <arg name="gui" default="true" doc="Starts gazebo gui" />
   
   <!-- startup simulated world -->
@@ -14,6 +15,7 @@
 
   <!-- send robot urdf to param server -->
   <include file="$(find ur_description)/launch/ur5_robotiq_upload.launch">
+    <arg name="transmission_hw_interface" value="hardware_interface/EffortJointInterface" />
     <arg name="limited" value="$(arg limited)"/>
   </include>
 
@@ -41,6 +43,7 @@
   <node name="arm_controller_spawner" pkg="controller_manager" type="controller_manager" args="spawn arm_controller" respawn="false" output="screen"/>
 
   <!-- load other controllers -->
+  <!-- 
   <node name="ros_control_controller_manager" pkg="controller_manager" type="controller_manager" respawn="false" output="screen" args="load joint_group_position_controller" />
-
+  -->
 </launch>
